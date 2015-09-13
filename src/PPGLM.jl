@@ -1,5 +1,5 @@
 module PPGLM
-
-# package code goes here
+include("KroneckerProduct.jl")
+include("HCatMatrix.jl")
 
 end # module
