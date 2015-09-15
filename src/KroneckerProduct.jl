@@ -5,6 +5,18 @@ typealias UnitStrideSubMatrix{T,N,P<:Array,I<:Tuple{Colon,Union{Colon,UnitRange{
 typealias UnitStrideVector Union{Vector,UnitStrideSubVector}
 typealias UnitStrideMatrix Union{Matrix,UnitStrideSubMatrix}
 
+function kron!(c::AbstractMatrix, a::AbstractMatrix, b::AbstractMatrix)
+    size(c, 1) == size(a,1)*size(b,1) && size(c, 2) == size(a,2)*size(b,2) ||
+        throw(DimensionMismatch("output has size $(size(c)) but inputs have size $(size(a)) and $(size(b))"))
+    @inbounds for j = 1:size(a,2), l = 1:size(b,2), i = 1:size(a,1)
+        aij = a[i,j]
+        @simd for k = 1:size(b,1)
+            @inbounds c[(i-1)*size(b, 1)+k, (j-1)*size(b, 2)+l] = aij*b[k,l]
+        end
+    end
+    c
+end
+
 type KroneckerProduct{T,S<:AbstractMatrix,V<:AbstractMatrix,RA<:AbstractMatrix,RB<:AbstractMatrix} <: AbstractMatrix{T}
     A::S
     B::V
@@ -61,18 +73,35 @@ function Base.At_mul_B!(out::StridedMatrix, X::KroneckerProduct, Y::AbstractMatr
     end
     out
 end
+function Base.At_mul_B!(out::StridedMatrix, X::KroneckerProduct, Y::KroneckerProduct)
+    kron!(out, X.A.'Y.A, X.B.'Y.B)
+end
 
-Base.At_mul_B(X::KroneckerProduct, Y::StridedMatrix) =
-    At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
-Base.At_mul_B(X::KroneckerProduct, Y::AbstractMatrix) =
-    At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
+function Base.At_mul_B!(out::UnitStrideVector, v::AbstractVector, X::KroneckerProduct)
+    # v = x'(A ⊗ B) <==> V = (B'*X*A)' = (X*A)'*B
+    length(v) == size(X, 1) || throw(DimensionMismatch("X has size $(size(X)) but v has length $(length(v))"))
+    A_mul_Bt!(pointer_to_array(pointer(out), (size(X.B, 2), size(X.A, 2))),
+              A_mul_B!(multmp!(X), reshape(v, size(X.B, 1), size(X.A, 1)), X.A), X.B)
+    out
+end
+
+Base.Ac_mul_B!{T<:Real}(out::StridedMatrix, X::KroneckerProduct{T}, Y::AbstractMatrix) =
+    At_mul_B!(out, X, Y)
+for T in (StridedMatrix, AbstractMatrix)
+    @eval begin
+        Base.At_mul_B(X::KroneckerProduct, Y::$T) =
+            At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
+        Base.Ac_mul_B{T<:Real}(X::KroneckerProduct{T}, Y::$T) =
+            At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
+    end
+end
 Base.At_mul_B(X::KroneckerProduct, Y::AbstractVector) =
     At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2)), X, Y)
-Base.Ac_mul_B{T<:Real}(X::KroneckerProduct{T}, Y::StridedMatrix) =
-    At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
-Base.Ac_mul_B{T<:Real}(X::KroneckerProduct{T}, Y::AbstractMatrix) =
-    At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
 Base.Ac_mul_B{T<:Real}(X::KroneckerProduct{T}, Y::AbstractVector) =
+    At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2)), X, Y)
+Base.At_mul_B(X::AbstractVector, Y::KroneckerProduct) =
+    At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2)), X, Y)
+Base.Ac_mul_B{T<:Real}(Y::AbstractVector{T}, X::KroneckerProduct) =
     At_mul_B!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2)), X, Y)
 
 rowtensor_type{T}(::StridedMatrix{T}) = Matrix{T}
@@ -105,12 +134,15 @@ function weightmul!(out::UnitStrideMatrix, X::KroneckerProduct, w::AbstractVecto
         X.Browtensor = rowtensor(X.B)
     end
     length(w) == size(X, 1) || throw(DimensionMismatch("X has size $(size(X)) but w has length $(length(w))"))
+    size(out, 1) == size(out, 2) == size(X, 2) ||
+        throw(DimensionMismatch("X has $(size(X, 2)) columns but output has size $(size(out))"))
     tmp = A_mul_B!(similar(X, (size(X.B, 2)^2, size(X.A, 2)^2)),
-             X.Browtensor'*reshape(w, size(X.B, 1), size(X.A, 1)), X.Arowtensor)
+                   X.Browtensor'*reshape(w, size(X.B, 1), size(X.A, 1)), X.Arowtensor)
     permutedims!(pointer_to_array(pointer(out), (size(X.B, 2), size(X.A, 2), size(X.B, 2), size(X.A, 2))),
                  reshape(tmp, size(X.B, 2), size(X.B, 2), size(X.A, 2), size(X.A, 2)), (1, 3, 2, 4))
     out
 end
+weightmul!(out::AbstractMatrix, X::KroneckerProduct, w::AbstractVector) = copy!(out, weightmul(X, w))
 
 weightmul{T,S}(X::AbstractMatrix{T}, w::AbstractVector{S}) =
     weightmul!(similar(X, promote_type(T, S), size(X, 2), size(X, 2)), X, w)
