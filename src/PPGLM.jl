@@ -1,8 +1,10 @@
 module PPGLM
 using StatsBase, Reexport
+export bsplines, raisedcosines
 @reexport using GLM
 include("KroneckerProduct.jl")
 include("HCatMatrix.jl")
+include("basis.jl")
 
 type PPGLMPredChol{T,M<:AbstractMatrix,C} <: GLM.LinPred
     X::M                           # model matrix

@@ -47,9 +47,32 @@ Y = randn(15, 3)
 @test_approx_eq PPGLM.weightmul(densekron, v) PPGLM.weightmul(kronprod, v)
 @test_approx_eq PPGLM.weightmul([densekron Y], v) PPGLM.weightmul(HCatMatrix(kronprod, Y), v)
 
-A = randn(100, 7)
-B = randn(100, 10)
-Y = randn(10000, 3)
-v = randn(10000)
+A = randn(10, 7)
+B = randn(10, 10)
+Y = randn(100, 3)
+v = randn(100)
 c1 = coef(fit(GeneralizedLinearModel, [kron(A, B) Y], v, Normal(), IdentityLink()))
 c2 = coef(fit(GeneralizedLinearModel, HCatMatrix(KroneckerProduct(A, B), Y), v, Normal(), IdentityLink()))
+
+const DATADIR = joinpath(dirname(@__FILE__), "data")
+
+#= in R
+	library(splines)
+	x <- bs(seq(0, 1000), knots=seq(100, 900, 100), degree=3)
+	write.table(x, "splines.csv", row.names=F, col.names=F)
+=#
+@test_approx_eq bsplines(0:1000, 3, 0:100:1000) readdlm(joinpath(DATADIR, "splines.txt"))
+
+#= with neuroGLM
+    bs = basisFactory.makeSmoothTemporalBasis('raised cosine', 1000, 20, @(x)x);
+    x = bs.B
+    save -ascii -double raisedcosines.txt x
+ =#
+@test_approx_eq raisedcosines(1:1000, 20) readdlm(joinpath(DATADIR, "raisedcosines.txt"))
+
+#= with neuroGLM
+    bs = basisFactory.makeNonlinearRaisedCos(10, 1, [0 100], 2);
+    x = bs.B
+    save -ascii -double raisedcosines.txt x
+ =#
+@test_approx_eq raisedcosines(0:242, 10, 0, 100, 2) readdlm(joinpath(DATADIR, "nonlinear_raisedcosines.txt"))
