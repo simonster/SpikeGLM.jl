@@ -1,4 +1,4 @@
-module PPGLM
+module SpikeGLM
 using StatsBase, Reexport
 export bsplines, raisedcosines
 @reexport using GLM
@@ -6,18 +6,18 @@ include("KroneckerProduct.jl")
 include("HCatMatrix.jl")
 include("basis.jl")
 
-type PPGLMPredChol{T,M<:AbstractMatrix,C} <: GLM.LinPred
+type SpikeGLMPredChol{T,M<:AbstractMatrix,C} <: GLM.LinPred
     X::M                           # model matrix
     beta0::Vector{T}               # base vector for coefficients
     delbeta::Vector{T}             # coefficient increment
     scratchbeta::Vector{T}
     chol::C
 end
-function PPGLMPredChol{T}(X::AbstractMatrix{T})
-    PPGLMPredChol(X, zeros(T, size(X, 2)), zeros(T, size(X, 2)), zeros(T, size(X, 2)), cholfact(X'X))
+function SpikeGLMPredChol{T}(X::AbstractMatrix{T})
+    SpikeGLMPredChol(X, zeros(T, size(X, 2)), zeros(T, size(X, 2)), zeros(T, size(X, 2)), cholfact(X'X))
 end
 
-function GLM.delbeta!{T}(p::PPGLMPredChol{T}, r::Vector{T}, wt::Vector{T})
+function GLM.delbeta!{T}(p::SpikeGLMPredChol{T}, r::Vector{T}, wt::Vector{T})
 	cholfact!(weightmul!(p.chol.factors, p.X, wt))
 	A_ldiv_B!(p.chol, At_mul_B!(p.delbeta, p.X, (r.*wt)))
 	p
@@ -43,7 +43,7 @@ function StatsBase.fit{T<:FloatingPoint,V<:AbstractVector}(::Type{GeneralizedLin
         end
     end
     rr = GlmResp{typeof(y),typeof(d),typeof(l)}(y, d, l, eta, mu, offset, wts)
-    res = GeneralizedLinearModel(rr, PPGLMPredChol(X), false)
+    res = GeneralizedLinearModel(rr, SpikeGLMPredChol(X), false)
     dofit ? fit(res; fitargs...) : res
 end
 

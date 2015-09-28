@@ -24,7 +24,7 @@ A = randn(3, 2)
 B = randn(5, 7)
 densekron = kron(A, B)
 kronprod = KroneckerProduct(A, B)
-@test_approx_eq densekron PPGLM.kron!(similar(densekron), A, B)
+@test_approx_eq densekron SpikeGLM.kron!(similar(densekron), A, B)
 @test_approx_eq densekron kronprod
 @test_approx_eq densekron convert(Matrix, kronprod)
 
@@ -41,11 +41,11 @@ v = randn(15)
 Y = randn(15, 3)
 @test_approx_eq densekron'Y kronprod'Y
 
-@test_approx_eq kron(A, ones(1, size(A, 2))).*kron(ones(1, size(A, 2)), A) PPGLM.rowtensor(A)
-@test_approx_eq kron(B, ones(1, size(B, 2))).*kron(ones(1, size(B, 2)), B) PPGLM.rowtensor(B)
+@test_approx_eq kron(A, ones(1, size(A, 2))).*kron(ones(1, size(A, 2)), A) SpikeGLM.rowtensor(A)
+@test_approx_eq kron(B, ones(1, size(B, 2))).*kron(ones(1, size(B, 2)), B) SpikeGLM.rowtensor(B)
 
-@test_approx_eq PPGLM.weightmul(densekron, v) PPGLM.weightmul(kronprod, v)
-@test_approx_eq PPGLM.weightmul([densekron Y], v) PPGLM.weightmul(HCatMatrix(kronprod, Y), v)
+@test_approx_eq SpikeGLM.weightmul(densekron, v) SpikeGLM.weightmul(kronprod, v)
+@test_approx_eq SpikeGLM.weightmul([densekron Y], v) SpikeGLM.weightmul(HCatMatrix(kronprod, Y), v)
 
 A = randn(10, 7)
 B = randn(10, 10)

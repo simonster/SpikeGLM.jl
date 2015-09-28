@@ -11,4 +11,4 @@ notifications:
 before_install:
  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 script:
- - julia -e 'Pkg.clone(pwd()); Pkg.build("PPGLM"); Pkg.test("PPGLM"; coverage=true)'
+ - julia -e 'Pkg.clone(pwd()); Pkg.build("SpikeGLM"); Pkg.test("SpikeGLM"; coverage=true)'

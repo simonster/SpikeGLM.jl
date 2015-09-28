@@ -1,3 +1,3 @@
-# PPGLM
+# SpikeGLM
 
-[![Build Status](https://travis-ci.org/simonster/PPGLM.jl.svg?branch=master)](https://travis-ci.org/simonster/PPGLM.jl)
+[![Build Status](https://travis-ci.org/simonster/SpikeGLM.jl.svg?branch=master)](https://travis-ci.org/simonster/SpikeGLM.jl)
