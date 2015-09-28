@@ -1,4 +1,4 @@
-using PPGLM
+using SpikeGLM
 using Base.Test
 
 # write your own tests here
@@ -75,4 +75,4 @@ const DATADIR = joinpath(dirname(@__FILE__), "data")
     x = bs.B
     save -ascii -double raisedcosines.txt x
  =#
-@test_approx_eq raisedcosines(0:242, 10, 0, 100, 2) readdlm(joinpath(DATADIR, "nonlinear_raisedcosines.txt"))
+@test_approx_eq raisedcosines(1, 10, 0, 100, 2) readdlm(joinpath(DATADIR, "nonlinear_raisedcosines.txt"))
