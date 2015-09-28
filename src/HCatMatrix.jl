@@ -76,7 +76,7 @@ for fn in (:Ac_mul_B, :At_mul_B)
             out
         end
 
-        Base.$fn(X::HCatMatrix, Y::Union(HCatMatrix, DenseMatrix)) =
+        Base.$fn(X::HCatMatrix, Y::Union{HCatMatrix, DenseMatrix}) =
             $fn!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2), size(Y, 2)), X, Y)
         Base.$fn(X::HCatMatrix, Y::DenseVector) =
             $fn!(Array(promote_type(eltype(X), eltype(Y)), size(X, 2)), X, Y)
